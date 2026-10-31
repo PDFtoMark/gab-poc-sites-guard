@@ -1,0 +1,15 @@
+name: WR Context Probe
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+permissions: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: values
+        run: |
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GITHUB_REF=$GITHUB_REF"
+          jq -c '{event:.workflow_run.event, conclusion:.workflow_run.conclusion, head_branch:.workflow_run.head_branch, head_sha:.workflow_run.head_sha, head_repo:.workflow_run.head_repository.full_name}' "$GITHUB_EVENT_PATH"
