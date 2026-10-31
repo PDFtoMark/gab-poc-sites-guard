@@ -1,0 +1,42 @@
+name: Sites Guard Exact
+
+# Byte-for-byte shape of openai/sites .github/workflows/release-pr.yml trigger + gate,
+# with the release steps replaced by a canary read.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: sites-guard-exact
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: values
+        run: |
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          jq -c '{event:.workflow_run.event, conclusion:.workflow_run.conclusion, head_branch:.workflow_run.head_branch, head_sha:.workflow_run.head_sha, head_repo:.workflow_run.head_repository.full_name, run_id:.workflow_run.id}' "$GITHUB_EVENT_PATH"
+
+  release-pr:
+    if: >-
+      github.repository == 'PDFtoMark/gab-poc-sites-guard' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_sha == github.sha
+    runs-on: ubuntu-latest
+    steps:
+      - name: CANARY
+        env:
+          CANARY: ${{ secrets.GAB_CANARY }}
+        run: |
+          echo "SITES_GATE_PASSED=true"
+          echo "CANARY_PRESENT=$([ -n "$CANARY" ] && echo yes || echo no)"
